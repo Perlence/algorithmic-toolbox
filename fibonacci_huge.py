@@ -1,20 +1,6 @@
 from itertools import count
-import sys
 
 import pytest
-
-
-def fibmod(n, m=None):
-    if n <= 1:
-        return n
-    prev, cur = 0, 1
-    if m is None:
-        for _ in range(n - 1):
-            prev, cur = cur, prev + cur
-    else:
-        for _ in range(n - 1):
-            prev, cur = cur % m, (prev + cur) % m
-    return cur
 
 
 def fibonacci_huge_smart(n, m):
@@ -26,9 +12,18 @@ def pisano_period(m):
         return 1
     prev, cur = 0, 1
     for n in count(2):
-        prev, cur = cur, fibmod(n) % m
+        prev, cur = cur, fibmod(n, m)
         if (prev, cur) == (0, 1):
             return n - 1
+
+
+def fibmod(n, m):
+    if n <= 1:
+        return n
+    prev, cur = 0, 1
+    for _ in range(n - 1):
+        prev, cur = cur % m, (prev + cur) % m
+    return cur
 
 fibonacci_huge = fibonacci_huge_smart
 
@@ -57,9 +52,3 @@ def test_pisano_period(n, expected):
 ])
 def test_fibonacci_huge(n, m, expected):
     assert fibonacci_huge(n, m) == expected
-
-
-if __name__ == '__main__':
-    inp = sys.stdin.read()
-    n = int(inp)
-    print(fibonacci_huge(n))

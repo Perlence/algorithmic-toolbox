@@ -42,6 +42,7 @@ def test_gcd(a, b, expected):
 @pytest.mark.parametrize('a, b, expected', [
     (6, 8, 24),
     (28851538, 1183019, 1933053046),
+    (2e9, 2e9-1, 3999999998000000000),
 ])
 def test_lcm(a, b, expected):
     assert lcm(a, b) == expected

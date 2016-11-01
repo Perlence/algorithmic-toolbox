@@ -41,6 +41,7 @@ fib_last_digit = fib_last_digit_smart
     (4, 3),
     (5, 5),
     (331, 9),
+    (132941, 1),
     (327305, 5),
 ])
 def test_fib_last_digit(n, expected):

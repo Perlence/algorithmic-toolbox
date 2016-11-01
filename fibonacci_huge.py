@@ -47,8 +47,14 @@ def test_pisano_period(n, expected):
 @pytest.mark.timeout(5)
 @pytest.mark.parametrize('n, m, expected', [
     (1, 239, 1),
+    (10, 2, 1),
     (239, 1000, 161),
     (2816213588, 30524, 10249),
+    # (1e18, 1e5, ?),
 ])
 def test_fibonacci_huge(n, m, expected):
     assert fibonacci_huge(n, m) == expected
+
+if __name__ == '__main__':
+    n, m = map(int, input().split())
+    print(fibonacci_huge(n, m))

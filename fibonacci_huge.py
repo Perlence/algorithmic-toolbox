@@ -12,7 +12,7 @@ def pisano_period(m):
         return 1
     prev, cur = 0, 1
     for n in count(2):
-        prev, cur = cur, fibmod(n, m)
+        prev, cur = cur, (prev + cur) % m
         if (prev, cur) == (0, 1):
             return n - 1
 

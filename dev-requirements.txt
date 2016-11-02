@@ -1,4 +1,5 @@
-neovim
+flake8
 ipython
+neovim
 pytest
 pytest-timeout

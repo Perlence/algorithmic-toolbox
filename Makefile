@@ -4,4 +4,4 @@ test:
 
 .PHONY: watch
 watch:
-	reflex -d none -g '*.py' -- py.test {}
+	reflex -d none -g '*.py' -- py.test -x {}

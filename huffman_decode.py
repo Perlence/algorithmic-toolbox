@@ -13,7 +13,7 @@ def cli(it, writable):
     ks, _ = next(it).split()
     k = int(ks)
     codes = {}
-    for line in islice(it, 0, k):
+    for line in islice(it, k):
         char, code = line.strip().split(': ')
         codes[code] = char
     encoded = next(it)

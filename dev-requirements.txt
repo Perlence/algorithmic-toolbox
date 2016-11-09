@@ -1,5 +1,6 @@
 flake8
 ipython
+line_profiler
 neovim
 pytest
 pytest-timeout

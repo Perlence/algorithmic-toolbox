@@ -82,7 +82,7 @@ class MaxHeap:
 def test_cli(inp, expected):
     sio = io.StringIO()
     cli(iter(inp), sio)
-    out = sio.getvalue().strip().split()
+    out = sio.getvalue().splitlines()
     assert out == expected
 
 if __name__ == '__main__':

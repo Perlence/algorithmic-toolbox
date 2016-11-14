@@ -41,16 +41,8 @@ def inversions_merge_sort(seq):
 
 
 def merge_sort(seq):
-    # print('merge_sort(seq)', seq, file=sys.stderr)
     if len(seq) < 2:
         return seq, 0
-    if len(seq) == 2:
-        x, y = seq
-        if x > y:
-            return [y, x], 1
-        else:
-            return seq, 0
-
     mid = int(len(seq) / 2)
     so1, invs1 = merge_sort(seq[:mid])
     so2, invs2 = merge_sort(seq[mid:])

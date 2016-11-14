@@ -4,12 +4,6 @@ import sys
 
 import pytest
 
-try:
-    profile
-except NameError:
-    def profile(fn):
-        return fn
-
 
 def main():
     cli(iter(sys.stdin), sys.stdout)
@@ -25,20 +19,16 @@ def inversions_naive(seq):
     result = 0
     for i, a in enumerate(seq):
         for b in seq[i+1:]:
-            print(a, b, file=sys.stderr)
             if a > b:
                 result += 1
     return result
 
 
 def inversions_divide(seq):
-    print(seq, file=sys.stderr)
     if len(seq) < 2:
-        print(seq, 0, file=sys.stderr)
         return 0
     elif len(seq) == 2:
         a, b = seq
-        print(seq, int(a > b), file=sys.stderr)
         return int(a > b)
     else:
         mid = int(len(seq) / 2)
@@ -50,10 +40,16 @@ def inversions_merge_sort(seq):
     return invs
 
 
-@profile
 def merge_sort(seq):
+    # print('merge_sort(seq)', seq, file=sys.stderr)
     if len(seq) < 2:
         return seq, 0
+    if len(seq) == 2:
+        x, y = seq
+        if x > y:
+            return [y, x], 1
+        else:
+            return seq, 0
 
     mid = int(len(seq) / 2)
     so1, invs1 = merge_sort(seq[:mid])
@@ -62,31 +58,21 @@ def merge_sort(seq):
     return merged, invs1 + invs2 + invs3
 
 
-@profile
 def merge(xs, ys):
     result = []
     invs = 0
-    diff = 1
-    while True:
-        if not xs:
-            return list(result + ys), invs
-        if not ys:
-            return list(result + xs), invs
-
-        x = xs[0]
-        difftmp = diff
-        for y in ys[:]:
-            if x <= y:
-                xs = xs[1:]
-                result.append(x)
-                break
-            else:
-                ys = ys[1:]
-                invs += diff
-                result.append(y)
-            diff = 1
-            difftmp += 1
-        diff = difftmp
+    i = j = 0
+    while i < len(xs) and j < len(ys):
+        if xs[i] <= ys[j]:
+            result.append(xs[i])
+            i += 1
+        else:
+            result.append(ys[j])
+            invs += len(xs) - i
+            j += 1
+    result.extend(xs[i:])
+    result.extend(ys[j:])
+    return result, invs
 
 
 def inversions_insort(seq):
@@ -119,6 +105,7 @@ def test_merge():
     assert merge([2], [4, 9]) == ([2, 4, 9], 0)
     assert merge([2, 3, 9], [2, 4, 9]) == ([2, 2, 3, 4, 9, 9], 3)
     assert merge([1, 3, 5, 9], [2, 3, 7, 8]) == ([1, 2, 3, 3, 5, 7, 8, 9], 7)
+    assert merge([2, 3, 5], [0, 5, 9]) == ([0, 2, 3, 5, 5, 9], 3)
 
 
 @pytest.mark.timeout(3)
@@ -135,6 +122,18 @@ def test_merge():
     ], [
         '3',
     ]),
+    ([
+        '2',
+        '10 2',
+    ], [
+        '1',
+    ]),
+    ([
+        '6',
+        '2 3 5 9 0 5',
+    ], [
+        '5',
+    ]),
 ])
 def test_cli(inp, expected):
     sio = io.StringIO()
@@ -143,24 +142,27 @@ def test_cli(inp, expected):
     assert out == expected
 
 
-def stress():
+def stress(full=False):
     import random
-    while True:
-        # n = random.randint(1, 1e5)
+    if not full:
+        n = int(6)
+        maxi = 10
+    else:
         n = int(1e5)
-        yield [random.randint(0, 1e9) for _ in range(n)]
+        maxi = 1e9
+    while True:
+        yield [random.randint(0, maxi) for _ in range(n)]
 
 
-# @pytest.mark.skip
-@pytest.mark.parametrize('seq', islice(stress(), 1))
+@pytest.mark.parametrize('seq', islice(stress(), 100))
 def test_stress(seq):
-    # assert inversions_naive(seq) == inversions_merge_sort(seq)
-    inversions_merge_sort(seq)
+    assert inversions(seq) == inversions_naive(seq)
+
+
+@pytest.mark.timeout(3)
+@pytest.mark.parametrize('seq', islice(stress(full=True), 1))
+def test_bench(seq):
+    inversions(seq)
 
 if __name__ == '__main__':
-    try:
-        line_profiler
-    except NameError:
-        main()
-    else:
-        pytest.main(sys.argv)
+    main()

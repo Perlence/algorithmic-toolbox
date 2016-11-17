@@ -1,6 +1,7 @@
+from collections import MutableSequence
 import random
 import io
-from itertools import islice
+from itertools import islice, chain
 import sys
 
 import pytest
@@ -53,59 +54,81 @@ def inclusions_recursive(dots, segments, result=None):
 
 
 @profile
-def inclusions_quick(dots, segments, lo=0, hi=None, result=None):
-    # print('dots, segments, result', dots, len(segments), result, file=sys.stderr)
-    if hi is None:
-        hi = len(dots)
-
-    if result is None:
-        dots = list(enumerate(dots))
-        result = [0 for _ in dots]
-
-    if lo >= hi or not segments:
-        return result
-
-    j = random.randint(lo, hi - 1)
-    dots[hi - 1], dots[j] = dots[j], dots[hi - 1]
-    m, pivot = partition(dots, lo, hi)
-
+def inclusions_sorted(dots, segments):
+    so = quicksort(chain(((i, v, '1dot') for (i, v) in enumerate(dots)),
+                         ((None, start, '0start') for (start, _) in segments),
+                         ((None, end, '2end') for (_, end) in segments)),
+                   key=lambda seq: (seq[1], seq[2]))
+    # so = sorted(chain(((i, v, '1dot') for (i, v) in enumerate(dots)),
+    #                   ((None, start, '0start') for (start, _) in segments),
+    #                   ((None, end, '2end') for (_, end) in segments)),
+    #             key=lambda seq: (seq[1], seq[2]))
     count = 0
-    seg_lo = []
-    seg_hi = []
-    for start, end in segments:
-        if start <= pivot:
-            seg_lo.append((start, end))
-        if pivot <= end:
-            seg_hi.append((start, end))
-        if start <= pivot <= end:
+    counts = [0 for _ in dots]
+    for index, value, kind in so:
+        if kind.endswith('start'):
             count += 1
-
-    # print('m, pivot, left, right', m, pivot, dots[lo:m], dots[m + 1:hi], file=sys.stderr)
-    # print('count', count, file=sys.stderr)
-    result[dots[m][0]] = count
-    inclusions_quick(dots, seg_lo, lo, m, result)
-    inclusions_quick(dots, seg_hi, m + 1, hi, result)
-    return result
+        elif kind.endswith('end'):
+            count -= 1
+        elif kind.endswith('dot'):
+            counts[index] = count
+    return counts
 
 
-def partition(seq, lo=0, hi=None):
+@profile
+def quicksort(iterable, key=None, lo=0, hi=None):
+    if not isinstance(iterable, MutableSequence):
+        seq = list(iterable)
+    else:
+        seq = iterable
+    if key is None:
+        key = lambda x: x
+    if hi is None:
+        hi = len(seq)
+
+    while lo < hi:
+        # Swap random element with last
+        j = random.randint(lo, hi - 1)
+        seq[hi - 1], seq[j] = seq[j], seq[hi - 1]
+
+        m, n = partition(seq, key, lo, hi)
+        if m - lo > hi - n - 1:
+            quicksort(seq, key, n + 1, hi)
+            hi = m
+        else:
+            quicksort(seq, key, lo, m)
+            lo = n + 1
+
+    return seq
+
+
+@profile
+def partition(seq, key=None, lo=0, hi=None):
+    if key is None:
+        key = lambda x: x
     if hi is None:
         hi = len(seq)
 
     hi -= 1
-    _, pivot = seq[hi]
-    i = lo
+    pivot = key(seq[hi])
+    i = k = lo
     for j in range(lo, hi):
-        _, val = seq[j]
-        if val <= pivot:
-            seq[i], seq[j] = seq[j], seq[i]
+        val = key(seq[j])
+        if val == pivot:
+            seq[k], seq[j] = seq[j], seq[k]
+            k += 1
+        elif val < pivot:
+            seq[k], seq[j] = seq[j], seq[k]
+            seq[i], seq[k] = seq[k], seq[i]
             i += 1
-    seq[hi], seq[i] = seq[i], seq[hi]
-    return i, seq[i][1]
+            k += 1
+    seq[hi], seq[k] = seq[k], seq[hi]
+    return i, k
 
 
 # inclusions = inclusions_recursive
-inclusions = inclusions_quick
+# inclusions = inclusions_quick
+inclusions = inclusions_sorted
 
 
 def stress(full=False):
@@ -114,10 +137,8 @@ def stress(full=False):
         m = int(3)
         maxi = 10
     else:
-        # n = int(5e4)
-        # m = int(5e4)
-        n = int(5e2)
-        m = int(5e2)
+        n = int(5e4)
+        m = int(5e4)
         maxi = 1e8
     while True:
         dots = set()
@@ -132,17 +153,32 @@ def stress(full=False):
         yield list(dots), segments
 
 
+@pytest.mark.parametrize('seq, m, n, expected', [
+    ([3, 0, 1, 1, 1], 1, 3, [0, 1, 1, 1, 3]),
+    ([3, 1, 1, 1, 0], 0, 0, [0, 1, 1, 1, 3]),
+    ([3, 10, 4, 9, 4], 1, 2, [3, 4, 4, 9, 10]),
+    ([-3, -10, -4, -9, -4], 2, 3, [-10, -9, -4, -4, -3]),
+])
+def test_partition(seq, m, n, expected):
+    j, k = partition(seq)
+    assert (j, k) == (m, n)
+    assert seq == expected
+
+
 @pytest.mark.parametrize('seq, _', islice(stress(), 100))
-def test_partition(seq, _):
-    seq = list(enumerate(seq))
-    j, pivot = partition(seq)
-    assert all([x <= pivot for (_, x) in seq[:j]]) and all([x > pivot for (_, x) in seq[j+1:]])
+def test_quicksort(seq, _):
+    assert quicksort(seq[:]) == sorted(seq)
 
 
-def test_inclusions():
-    # assert inclusions([-4, -4, -4], [(8, 10), (-5, 4), (3, 10)]) == [1, 1, 1]
-    assert inclusions([-1, 2, 5], [(1, 9), (-5, 2), (0, 7)]) == [1, 3, 2]
-    assert inclusions([7, -5, 5], [(-7, 6), (1, 9), (2, 10)]) == [2, 1, 3]
+@pytest.mark.parametrize('dots, segments, expected', [
+    ([3], [(0, 3), (3, 6)], [2]),
+    ([-1, 2, 5], [(1, 9), (-5, 2), (0, 7)], [1, 3, 2]),
+    ([7, -5, 5], [(-7, 6), (1, 9), (2, 10)], [2, 1, 3]),
+    ([0, 8, -9], [(-8, 7), (-6, 7), (4, 6)], [2, 0, 0]),
+    ([10, -4, -10], [(-4, 3), (-9, 8), (-4, 9)], [0, 3, 0]),
+])
+def test_inclusions(dots, segments, expected):
+    assert inclusions(dots, segments) == expected
 
 
 @pytest.mark.timeout(3)
@@ -169,7 +205,7 @@ def test_stress(dots, segments):
 
 
 # @pytest.mark.skip
-# @pytest.mark.timeout(3)
+@pytest.mark.timeout(3)
 @pytest.mark.parametrize('dots, segments', islice(stress(full=True), 1))
 def test_bench(dots, segments):
     list(inclusions(dots, segments))

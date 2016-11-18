@@ -32,7 +32,7 @@ def inclusions_recursive(dots, segments, result=None):
 
     if result is None:
         dots = list(enumerate(dots))
-        result = [0 for _ in dots]
+        result = [0] * len(dots)
 
     if not dots:
         return result
